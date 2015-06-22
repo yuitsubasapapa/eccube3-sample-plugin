@@ -1,0 +1,3 @@
+EC-CUBEのライセンスに準じます。
+
+https://github.com/EC-CUBE
