@@ -4,14 +4,14 @@ namespace Plugin\CategoryContent;
 
 use Eccube\Event\RenderEvent;
 use Eccube\Event\ShoppingEvent;
-use Plugin\GmoPaymentGateway\Controller\Util\PaymentUtil;
-use Plugin\GmoPaymentGateway\Controller\Util\CommonUtil;
-use Plugin\GmoPaymentGateway\Service\client\PG_MULPAY_Client_Util;
-use Plugin\GmoPaymentGateway\Service\client\PG_MULPAY_Client_Member;
 use Plugin\GmoPaymentGateway\Controller\Helper\PageHelper_PaymentEdit;
+use Plugin\GmoPaymentGateway\Controller\Util\CommonUtil;
+use Plugin\GmoPaymentGateway\Controller\Util\PaymentUtil;
+use Plugin\GmoPaymentGateway\Service\client\PG_MULPAY_Client_Member;
+use Plugin\GmoPaymentGateway\Service\client\PG_MULPAY_Client_Util;
+use Symfony\Component\CssSelector\CssSelector;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
-use Symfony\Component\CssSelector\CssSelector;
 
 class CategoryContent
 {
@@ -20,6 +20,51 @@ class CategoryContent
     public function __construct($app)
     {
         $this->app = $app;
+    }
+
+    public function onRenderProductListBefore(FilterResponseEvent $event)
+    {
+        $app = $this->app;
+        $request = $event->getRequest();
+        $response = $event->getResponse();
+
+        $id = $request->query->get('category_id');
+
+        // category_idがない場合、レンダリングを変更しない
+        if (is_null($id)) {
+            return;
+        }
+
+        $CategoryContent = $app['category_content.repository.category_content']
+            ->findOneBy(array('category_id' => $id));
+
+        // 登録がない、もしくは空で登録されている場合、レンダリングを変更しない
+        if (is_null($CategoryContent) || $CategoryContent->getContent() == '') {
+            return;
+        }
+
+        // 書き換えhtmlの初期化
+        $html = $response->getContent();
+        libxml_use_internal_errors(true);
+        $dom = new \DOMDocument();
+        $dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+        $dom->encoding = "UTF-8";
+        $dom->formatOutput = true;
+
+        // 挿入対象を取得
+        $navElement = $dom->getElementById('page_navi_top');
+        if (!$navElement instanceof \DOMElement) {
+            return;
+        }
+
+        $template = $dom->createDocumentFragment();
+        $template->appendXML($CategoryContent->getContent());
+
+        $node = $dom->importNode($template, true);
+        $navElement->insertBefore($node);
+
+        $response->setContent($dom->saveHTML());
+        $event->setResponse($response);
     }
 
     public function onRenderAdminProductCategoryEditBefore(FilterResponseEvent $event)
