@@ -1,0 +1,8 @@
+<br />
+<div class="form-group">
+    {{ form_label(form.content) }}
+    <div class="col-sm-9 col-lg-10" style="margin-top: 20px;">
+        {{ form_widget(form.content, { attr : { 'rows' : 15, style : 'font-size:12px' } }) }}
+        {{ form_errors(form.content) }}
+    </div>
+</div>
