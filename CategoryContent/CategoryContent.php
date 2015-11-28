@@ -78,7 +78,12 @@ class CategoryContent
         $html = $response->getContent();
         $crawler = new Crawler($html);
 
-        $CategoryContent = $app['category_content.repository.category_content']->find($id);
+        // 「新規」の時 $id=null なのでこれがないとエラーになる
+		if($id !== null)
+            $CategoryContent = $app['category_content.repository.category_content']->find($id);
+        else
+            $CategoryContent = null;
+        
         if (is_null($CategoryContent)) {
             $CategoryContent = new \Plugin\CategoryContent\Entity\CategoryContent();
         }
@@ -122,19 +127,35 @@ class CategoryContent
             ->createBuilder('admin_category')
             ->getForm();
 
-        $CategoryContent = $app['category_content.repository.category_content']->find($id);
+        // 「新規」の時 $id=null なのでこれがないとエラーになる
+        if($id !== null)
+        	$CategoryContent = $app['category_content.repository.category_content']->find($id);
+        else
+        	$CategoryContent = null;
         if (is_null($CategoryContent)) {
             $CategoryContent = new \Plugin\CategoryContent\Entity\CategoryContent();
         }
+        
         $form->get('content')->setData($CategoryContent->getContent());
-
         $form->handleRequest($app['request']);
 
         if ('POST' === $app['request']->getMethod()) {
             if ($form->isValid()) {
                 $content = $form->get('content')->getData();
 
-                $Category = $app['eccube.repository.category']->find($id);
+                // 新規に登録する場合、$id=nullが渡ってくるのでエラーとなる
+                if($id) {
+                    $Category = $app['eccube.repository.category']->find($id);
+                } else {
+                	// このやり方は、少々危ない感じがする。何か手を考えた方が良い感じ
+                    $qb = $app['eccube.repository.category']->createQueryBuilder('c')
+                        ->select('max(c.id)')
+                        ->where('c.del_flg = 0');
+                    $id = $qb->getQuery()
+                        ->getSingleScalarResult();
+                    $Category = $app['eccube.repository.category']->find($id);
+
+                }
 
                 $CategoryContent
                     ->setCategoryId($Category->getId())
