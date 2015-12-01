@@ -1,6 +1,3 @@
-eccube.event.app.before:
-    - [onCartIndexBefore, NORMAL]
-    - [onCartIndexBefore2, NORMAL]
 eccube.event.controller.cart.before:
     - [onCartIndexBefore, LAST]
 eccube.event.controller.cart.after:
